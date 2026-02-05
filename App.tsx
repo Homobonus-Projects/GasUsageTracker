@@ -22,22 +22,27 @@ const App: React.FC = () => {
         // 1. Try fetching from API (Server)
         const response = await fetch('api/readings');
         if (response.ok) {
-          const serverData = await response.json();
-          
-          // Migration logic: If server is empty but local has data, use local (it will be synced back to server)
-          if (Array.isArray(serverData) && serverData.length === 0) {
-            const localSaved = localStorage.getItem('gas_readings');
-            if (localSaved) {
-              const parsed = JSON.parse(localSaved);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                setReadings(parsed);
-                return; // Exit, we used local data
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const serverData = await response.json();
+            
+            // Migration logic: If server is empty but local has data, use local (it will be synced back to server)
+            if (Array.isArray(serverData) && serverData.length === 0) {
+              const localSaved = localStorage.getItem('gas_readings');
+              if (localSaved) {
+                const parsed = JSON.parse(localSaved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  setReadings(parsed);
+                  return; // Exit, we used local data
+                }
               }
             }
-          }
-          
-          if (Array.isArray(serverData)) {
-            setReadings(serverData);
+            
+            if (Array.isArray(serverData)) {
+              setReadings(serverData);
+            }
+          } else {
+            console.warn("API returned non-JSON response (likely HTML fallback)");
           }
         }
       } catch (e) {
