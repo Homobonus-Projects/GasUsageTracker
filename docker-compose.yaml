@@ -1,0 +1,9 @@
+services:
+  web:
+    # The image is specified via an environment variable in the deployment script
+    image: ${IMAGE_NAME_WITH_TAG}
+    container_name: gas_usage_tracker
+    restart: always
+    ports:
+      # Map port 5003 on the host to port 3000 in the container
+      - "5003:3000"

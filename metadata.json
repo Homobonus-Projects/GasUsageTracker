@@ -1,0 +1,8 @@
+
+{
+  "name": "GasTrack AI",
+  "description": "Smart gas usage notepad that extracts meter readings from photos using AI, tracks consumption trends, and visualizes heating efficiency.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
