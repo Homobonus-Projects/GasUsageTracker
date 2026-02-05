@@ -17,30 +17,61 @@ const App: React.FC = () => {
 
   // Load data from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('gas_readings');
-    if (saved) {
+    const loadData = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setReadings(parsed);
+        // 1. Try fetching from API (Server)
+        const response = await fetch('api/readings');
+        if (response.ok) {
+          const serverData = await response.json();
+          
+          // Migration logic: If server is empty but local has data, use local (it will be synced back to server)
+          if (Array.isArray(serverData) && serverData.length === 0) {
+            const localSaved = localStorage.getItem('gas_readings');
+            if (localSaved) {
+              const parsed = JSON.parse(localSaved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setReadings(parsed);
+                return; // Exit, we used local data
+              }
+            }
+          }
+          
+          if (Array.isArray(serverData)) {
+            setReadings(serverData);
+          }
         }
       } catch (e) {
-        console.error("Failed to parse readings", e);
+        console.error("Failed to load from API, falling back to local:", e);
+        // Fallback to localStorage
+        const saved = localStorage.getItem('gas_readings');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) setReadings(parsed);
+          } catch (err) { console.error(err); }
+        }
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+    loadData();
   }, []);
 
-  // Save data to localStorage whenever readings change
+  // Save data to API and localStorage whenever readings change
   useEffect(() => {
     if (!isLoading) {
+      // Save to Server
+      fetch('api/readings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(readings)
+      }).catch(err => console.error("API Save failed:", err));
+
+      // Keep LocalStorage as backup
       try {
         localStorage.setItem('gas_readings', JSON.stringify(readings));
       } catch (e: any) {
-        if (e.name === 'QuotaExceededError' || e.code === 22) {
-          toast.error("Storage is full! Try deleting old readings with photos to make room.");
-        }
-        console.error("Storage error:", e);
+        console.error("LocalStorage error:", e);
       }
     }
   }, [readings, isLoading]);
